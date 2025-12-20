@@ -10,7 +10,7 @@ export default function App() {
 
   return (
     <div className="app">
-      <h1>🏡 Дом мечты</h1>
+      <h1>Дом мечты</h1>
 
       <SeasonBar season={season} setSeason={setSeason} />
 

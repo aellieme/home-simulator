@@ -17,7 +17,7 @@ export default function HousePlacer({ setMessage }) {
       setMessage(res)
       setPlacedHouse(null)
     } else {
-      setMessage({ message: 'Дом успешно размещён', rule: '' })
+      setMessage({ message: 'Дом размещён!', rule: '' })
       setPlacedHouse(house)
     }
   }
