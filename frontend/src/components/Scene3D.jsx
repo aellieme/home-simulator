@@ -159,8 +159,11 @@ export default function Scene3D({ season, house, trees, garages, onPlotClick, pl
         if (season === 'AUTUMN') leafColor = 0xff9800; // Осень (рыжий)
         if (treeData.harvested) leafColor = 0x8d6e63; // Собрано (коричневый)
         const leavesGeom = new THREE.ConeGeometry(15, 50, 8)
-        const leavesMat = new THREE.MeshStandardMaterial({ color: 0x2e7d32 })
+        // const leavesMat = new THREE.MeshStandardMaterial({ color: 0x2e7d32 })
+
+        const leavesMat = new THREE.MeshStandardMaterial({ color: leafColor }) 
         const leaves = new THREE.Mesh(leavesGeom, leavesMat)
+
         leaves.position.y = 45
         group.add(leaves)
 

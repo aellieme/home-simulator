@@ -1,36 +1,42 @@
-// App.jsx
 import { useState } from 'react'
 import Scene3D from './components/Scene3D'
-import { checkHouse } from './api'
+// Добавлены импорты для всех типов проверок
+import { checkHouse, checkTree, checkGarage } from './api'
 
 export default function App() {
   const [season, setSeason] = useState('WINTER')
   
   // Состояние мира
-  const [plotSize, setPlotSize] = useState({ w: 800, h: 800 }) // Размеры участка
-  const [houseConfig, setHouseConfig] = useState({ w: 100, h: 100 }) // Размеры дома
+  const [plotSize, setPlotSize] = useState({ w: 800, h: 800 }) 
+  const [houseConfig, setHouseConfig] = useState({ w: 100, h: 100 }) 
   
   // Объекты на сцене
   const [house, setHouse] = useState(null)
-  const [trees, setTrees] = useState([]) // Список деревьев [{x,y}, {x,y}]
+  const [trees, setTrees] = useState([]) 
+  const [garages, setGarages] = useState([]) // Добавлено состояние гаражей
+
+  // Игровые механики
+  const [activeTool, setActiveTool] = useState('TREE') // TREE или GARAGE
+  const [harvestScore, setHarvestScore] = useState(0) // Урожай
   
   const [notification, setNotification] = useState(null)
 
   // Обработчик клика
   const handleSceneClick = async (coords) => {
+    // Подготовка данных для API
+    const apiX = coords.x + (plotSize.w / 2)
+    const apiY = coords.y + (plotSize.h / 2)
+    const plotData = { width: plotSize.w, height: plotSize.h }
+
     // 1. ВЕСНА: Строим дом
     if (season === 'SPRING') {
-      const apiX = coords.x + (plotSize.w / 2)
-      const apiY = coords.y + (plotSize.h / 2)
-
-      const plotData = { width: plotSize.w, height: plotSize.h }
       const houseData = { x: apiX, y: apiY, width: houseConfig.w, height: houseConfig.h }
 
       try {
         const result = await checkHouse(plotData, houseData)
         if (result.violation) {
              setNotification({ message: result.message, rule: result.rule })
-             return // Не ставим дом, если нарушение ( убрать return чтобы разрешить)
+             return 
         } else {
              setNotification(null)
         }
@@ -40,21 +46,65 @@ export default function App() {
       }
     } 
     
-    // 2. ЛЕТО: Сажаем деревья
+    // 2. ЛЕТО: Сажаем деревья или строим гаражи
     else if (season === 'SUMMER') {
-      // Здесь тоже можно добавить проверку норм (backend), но пока просто ставим
-      const newTree = { x: coords.x, y: coords.y, id: Date.now() }
-      setTrees(prev => [...prev, newTree])
+      
+      if (activeTool === 'TREE') {
+          try {
+            const result = await checkTree(plotData, { x: apiX, y: apiY })
+            if (result.violation) {
+                setNotification({ message: result.message, rule: result.rule })
+                return
+            }
+            // Успех
+            setNotification(null)
+            const newTree = { x: coords.x, y: coords.y, id: Date.now(), harvested: false }
+            setTrees(prev => [...prev, newTree])
+          } catch(e) { console.error(e) }
+      } 
+      else if (activeTool === 'GARAGE') {
+          // Гараж фиксированного размера 40x60
+          const gW = 40
+          const gH = 60
+          try {
+             // Предполагаем, что функция checkGarage существует в api.js
+             const result = await checkGarage(plotData, { x: apiX, y: apiY, width: gW, height: gH })
+             if (result.violation) {
+                 setNotification({ message: result.message, rule: result.rule })
+                 return
+             }
+             setNotification(null)
+             setGarages(prev => [...prev, { x: coords.x, y: coords.y, width: gW, height: gH, id: Date.now() }])
+          } catch(e) { console.error(e) }
+      }
+    }
+
+    // 3. ОСЕНЬ: Сбор урожая
+    else if (season === 'AUTUMN') {
+        const clickRange = 40 // Радиус клика
+        setTrees(prev => prev.map(t => {
+            const dx = t.x - coords.x
+            const dy = t.y - coords.y
+            const dist = Math.sqrt(dx*dx + dy*dy)
+            
+            if (dist < clickRange && !t.harvested) {
+                setHarvestScore(s => s + 1)
+                return { ...t, harvested: true } // Меняем состояние дерева
+            }
+            return t
+        }))
     }
   }
 
   return (
     <div className="app-container">
       <Scene3D 
+        season={season} // Передаем сезон для цвета листьев
         house={house} 
-        trees={trees} // Передаем деревья в сцену
+        trees={trees} 
+        garages={garages} // Передаем гаражи
         plotSize={plotSize}
-        houseConfig={houseConfig} // Передаем размеры дома для отрисовки
+        houseConfig={houseConfig} 
         onPlotClick={handleSceneClick} 
       />
 
@@ -65,37 +115,39 @@ export default function App() {
               <button 
                 key={s} 
                 className={season === s ? 'active' : ''} 
-                onClick={() => setSeason(s)}
-              >
+                onClick={() => setSeason(s)}>
                 {s === 'WINTER' ? ' Зима' : s === 'SPRING' ? ' Весна' : s === 'SUMMER' ? ' Лето' : ' Осень'}
               </button>
             ))}
           </div>
 
-          {/* ИНТЕРФЕЙС ЗИМЫ: Настройки */}
           {season === 'WINTER' && (
             <div style={{ marginTop: 10 }}>
               <h3> Проектирование</h3>
-              <label>
-                Ширина участка: 
-                <input type="number" value={plotSize.w} onChange={e => setPlotSize({...plotSize, w: +e.target.value})} />
-              </label>
+              <label>Ширина участка: <input type="number" value={plotSize.w} onChange={e => setPlotSize({...plotSize, w: +e.target.value})} /></label>
               <br/>
-              <label>
-                Длина участка: 
-                <input type="number" value={plotSize.h} onChange={e => setPlotSize({...plotSize, h: +e.target.value})} />
-              </label>
+              <label>Длина участка: <input type="number" value={plotSize.h} onChange={e => setPlotSize({...plotSize, h: +e.target.value})} /></label>
               <hr/>
-              <label>
-                Размер дома (ширина): 
-                <input type="number" value={houseConfig.w} onChange={e => setHouseConfig({...houseConfig, w: +e.target.value})} />
-              </label>
+              <label>Размер дома: <input type="number" value={houseConfig.w} onChange={e => setHouseConfig({w: +e.target.value, h: +e.target.value})} /></label>
             </div>
           )}
 
           {season === 'SPRING' && <p>Кликните, чтобы разместить фундамент дома ({houseConfig.w}x{houseConfig.h}).</p>}
-          {season === 'SUMMER' && <p>Кликните, чтобы посадить дерево.</p>}
-          {season === 'AUTUMN' && <p>Осень. Сбор урожая (функционал в разработке).</p>}
+          
+          {season === 'SUMMER' && (
+              <div>
+                  <p>Выберите объект для размещения:</p>
+                  <button onClick={() => setActiveTool('TREE')} className={activeTool === 'TREE' ? 'active' : ''} style={{marginRight: 10}}>Дерево</button>
+                  <button onClick={() => setActiveTool('GARAGE')} className={activeTool === 'GARAGE' ? 'active' : ''}>Гараж</button>
+              </div>
+          )}
+          
+          {season === 'AUTUMN' && (
+              <div>
+                  <p>Осень. Кликайте по оранжевым деревьям для сбора.</p>
+                  <h3>Собрано: {harvestScore}</h3>
+              </div>
+          )}
         </div>
 
         {notification && (
