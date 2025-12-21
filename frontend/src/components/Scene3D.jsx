@@ -7,7 +7,7 @@ export default function Scene3D({
   house, 
   trees, 
   garages, 
-  gardenBeds, 
+  gardenBeds, // <--- Новый проп
   cctv, 
   viewMode,
   onPlotClick, 
@@ -22,7 +22,7 @@ export default function Scene3D({
 
   useEffect(() => { onPlotClickRef.current = onPlotClick }, [onPlotClick])
 
-  
+  // --- 1. ИНИЦИАЛИЗАЦИЯ (Без изменений) ---
   useEffect(() => {
     const width = window.innerWidth
     const height = window.innerHeight
@@ -126,7 +126,7 @@ export default function Scene3D({
     scene.add(new THREE.GridHelper(Math.max(plotSize.w, plotSize.h), 20))
   }, [plotSize])
 
-  // basic ДЕРЕВЬЯ И ЯБЛОНИ ---
+  // --- ДЕРЕВЬЯ И ЯБЛОНИ ---
   useEffect(() => {
     const scene = sceneRef.current; if (!scene) return;
     const oldTrees = []; scene.traverse(o => { if (o.name === 'tree_group') oldTrees.push(o) });
@@ -178,7 +178,7 @@ export default function Scene3D({
     }
   }, [trees, season])
 
-  // ГРЯДКИ 
+  // --- ГРЯДКИ (НОВОЕ) ---
   useEffect(() => {
       const scene = sceneRef.current; if (!scene) return;
       const old = []; scene.traverse(o => { if (o.name === 'garden_bed') old.push(o) });
