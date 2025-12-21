@@ -84,3 +84,18 @@ def check_garage(plot, garage):
 
     if garage.y + g_height > plot.height - min_dist:
         raise NormViolation("Гараж слишком близко к нижней границе", "СНиП 30-02-97 — ≥ 1 м")
+
+def check_garden_bed(plot, bed):
+    min_dist = 10
+    
+    b_width = bed.width
+    b_height = bed.height
+
+    if bed.x < min_dist:
+        raise NormViolation("Грядка слишком близко к левой границе", "СНиП 30-02-97")
+    if bed.y < min_dist:
+        raise NormViolation("Грядка слишком близко к верхней границе", "СНиП 30-02-97")
+    if bed.x + b_width > plot.width - min_dist:
+        raise NormViolation("Грядка слишком близко к правой границе", "СНиП 30-02-97")
+    if bed.y + b_height > plot.height - min_dist:
+        raise NormViolation("Грядка слишком близко к нижней границе", "СНиП 30-02-97")

@@ -2,4 +2,4 @@ home-env
 frontend/node_modules
 frontend/public
 images
-backend/__pycache__
+backend/__pycache__/

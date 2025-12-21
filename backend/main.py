@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 # from models import PlacementRequest
 from pydantic import BaseModel
-from norms import check_house, NormViolation, check_tree, check_garage
+from norms import check_house, NormViolation, check_tree, check_garage, check_garden_bed
 
 app = FastAPI()
 # app.add_middleware(
@@ -123,6 +123,14 @@ async def check_tree_endpoint(data: CheckTreeRequest):
 async def check_garage_endpoint(data: GarageRequest):
     try:
         check_garage(data.plot, data.garage)
+        return {"violation": False, "message": "OK"}
+    except NormViolation as e:
+        return {"violation": True, "message": e.message, "rule": e.rule}
+    
+@app.post("/check-garden-bed")
+async def check_garden_bed_endpoint(data: GarageRequest): 
+    try:
+        check_garden_bed(data.plot, data.garage)
         return {"violation": False, "message": "OK"}
     except NormViolation as e:
         return {"violation": True, "message": e.message, "rule": e.rule}

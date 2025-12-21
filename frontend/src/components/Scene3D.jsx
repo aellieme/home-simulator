@@ -1,46 +1,49 @@
-// Scene3D.jsx
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'
 
-export default function Scene3D({ season, house, trees, garages, onPlotClick, plotSize = { w: 800, h: 800 }, houseConfig = { w: 100, h: 100 } }) {
+export default function Scene3D({ 
+  season, 
+  house, 
+  trees, 
+  garages, 
+  gardenBeds, 
+  cctv, 
+  viewMode,
+  onPlotClick, 
+  plotSize = { w: 800, h: 800 }, 
+  houseConfig = { w: 100, h: 100 } 
+}) {
   const mountRef = useRef(null)
   const sceneRef = useRef(null)
   const houseRef = useRef(null)
-  
+  const cameraRef = useRef(null)
   const onPlotClickRef = useRef(onPlotClick)
 
-  useEffect(() => {
-    onPlotClickRef.current = onPlotClick
-  }, [onPlotClick])
+  useEffect(() => { onPlotClickRef.current = onPlotClick }, [onPlotClick])
 
-  // иниц-я сцены
+  
   useEffect(() => {
     const width = window.innerWidth
     const height = window.innerHeight
-
-    // Создаем сцену
     const scene = new THREE.Scene()
     scene.background = new THREE.Color(0xe0f7fa)
     sceneRef.current = scene
 
-    // Камера
     const camera = new THREE.PerspectiveCamera(45, width / height, 1, 5000)
+    cameraRef.current = camera
     camera.position.set(0, 600, 800)
     camera.lookAt(0, 0, 0)
 
-    // Рендер
     const renderer = new THREE.WebGLRenderer({ antialias: true })
     renderer.setSize(width, height)
     renderer.shadowMap.enabled = true
     
-    // Очищаем контейнер перед добавлением 
     if (mountRef.current) {
         mountRef.current.innerHTML = ''
         mountRef.current.appendChild(renderer.domElement)
     }
 
-    // Свет
     const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.8)
     hemiLight.position.set(0, 200, 0)
     scene.add(hemiLight)
@@ -50,7 +53,6 @@ export default function Scene3D({ season, house, trees, garages, onPlotClick, pl
     dirLight.castShadow = true
     scene.add(dirLight)
 
-    // Обработка клика
     const raycaster = new THREE.Raycaster()
     const mouse = new THREE.Vector2()
 
@@ -73,7 +75,6 @@ export default function Scene3D({ season, house, trees, garages, onPlotClick, pl
 
     window.addEventListener('click', onMouseClick)
 
-    // Анимация
     let animationId
     const animate = () => {
       animationId = requestAnimationFrame(animate)
@@ -81,7 +82,6 @@ export default function Scene3D({ season, house, trees, garages, onPlotClick, pl
     }
     animate()
 
-    // Ресайз
     const handleResize = () => {
       camera.aspect = window.innerWidth / window.innerHeight
       camera.updateProjectionMatrix()
@@ -89,7 +89,6 @@ export default function Scene3D({ season, house, trees, garages, onPlotClick, pl
     }
     window.addEventListener('resize', handleResize)
 
-    // Очистка при удалении компонента
     return () => {
       window.removeEventListener('click', onMouseClick)
       window.removeEventListener('resize', handleResize)
@@ -100,21 +99,23 @@ export default function Scene3D({ season, house, trees, garages, onPlotClick, pl
     }
   }, []) 
 
-  // обновление земли
   useEffect(() => {
-    const scene = sceneRef.current
-    if (!scene) return
+      const camera = cameraRef.current
+      if (!camera) return
+      if (viewMode === '2D') {
+          camera.position.set(0, 1000, 0)
+          camera.lookAt(0, 0, 0)
+      } else {
+          camera.position.set(0, 600, 800)
+          camera.lookAt(0, 0, 0)
+      }
+  }, [viewMode])
 
-    // Удаляем старую землю
-    const toRemove = []
-    scene.traverse(child => {
-        if (child.name === 'ground' || child.type === 'GridHelper') {
-            toRemove.push(child)
-        }
-    })
-    toRemove.forEach(child => scene.remove(child))
+  useEffect(() => {
+    const scene = sceneRef.current; if (!scene) return;
+    const toRemove = []; scene.traverse(c => { if (c.name === 'ground' || c.type === 'GridHelper') toRemove.push(c) });
+    toRemove.forEach(c => scene.remove(c));
 
-    // Новая земля
     const geometry = new THREE.PlaneGeometry(plotSize.w, plotSize.h)
     const material = new THREE.MeshStandardMaterial({ color: 0x81c784 }) 
     const ground = new THREE.Mesh(geometry, material)
@@ -122,119 +123,144 @@ export default function Scene3D({ season, house, trees, garages, onPlotClick, pl
     ground.receiveShadow = true
     ground.name = "ground"
     scene.add(ground)
-
-    // Новая сетка
-    const gridHelper = new THREE.GridHelper(Math.max(plotSize.w, plotSize.h), 20)
-    scene.add(gridHelper)
-
+    scene.add(new THREE.GridHelper(Math.max(plotSize.w, plotSize.h), 20))
   }, [plotSize])
 
-  //обновление деревьев
+  // basic ДЕРЕВЬЯ И ЯБЛОНИ ---
   useEffect(() => {
-    const scene = sceneRef.current
-    if (!scene) return
+    const scene = sceneRef.current; if (!scene) return;
+    const oldTrees = []; scene.traverse(o => { if (o.name === 'tree_group') oldTrees.push(o) });
+    oldTrees.forEach(t => scene.remove(t));
 
-    const oldTrees = []
-    scene.traverse(obj => {
-      if (obj.name === 'tree_group') oldTrees.push(obj)
-    })
-    oldTrees.forEach(t => scene.remove(t))
-
-    // рисуем новые деревья
     if (trees && trees.length > 0) {
+      const loader = new GLTFLoader()
+
       trees.forEach(treeData => {
         const group = new THREE.Group()
         group.name = 'tree_group'
         group.position.set(treeData.x, 0, treeData.y)
 
-        // Ствол
-        const trunkGeom = new THREE.CylinderGeometry(5, 5, 20)
-        const trunkMat = new THREE.MeshStandardMaterial({ color: 0x8d6e63 })
-        const trunk = new THREE.Mesh(trunkGeom, trunkMat)
-        trunk.position.y = 10
-        group.add(trunk)
+        // Если это ЯБЛОНЯ
+        if (treeData.type === 'apple') {
+             // Пробуем загрузить GLB
+             loader.load('/models/apple_tree.glb', (gltf) => {
+                 const model = gltf.scene.clone() // Клонируем, чтобы использовать много раз
+                 model.scale.set(10, 10, 10) // Настройте масштаб
+                 // Если осень - можно покрасить листья, но у GLB сложнее менять материалы динамически без обхода
+                 // Если собрано - можно сделать полупрозрачным или скрыть яблоки
+                 if (treeData.harvested) model.visible = false; // Условно "собрали" -> исчезло (или замените на пень)
+                 group.add(model)
+             }, undefined, () => {
+                 // Фолбек, если модели нет: Красное дерево
+                 const trunk = new THREE.Mesh(new THREE.CylinderGeometry(5, 5, 20), new THREE.MeshStandardMaterial({ color: 0x5d4037 }))
+                 trunk.position.y = 10; group.add(trunk)
+                 const leaves = new THREE.Mesh(new THREE.SphereGeometry(20, 16, 16), new THREE.MeshStandardMaterial({ color: 0xff1744 })) // Красная крона
+                 leaves.position.y = 40; group.add(leaves)
+             })
+        } 
+        // ОБЫЧНОЕ ДЕРЕВО
+        else {
+            const trunk = new THREE.Mesh(new THREE.CylinderGeometry(5, 5, 20), new THREE.MeshStandardMaterial({ color: 0x8d6e63 }))
+            trunk.position.y = 10
+            group.add(trunk)
 
-        // Листва
-        let leafColor = 0x2e7d32
-        if (season === 'AUTUMN') leafColor = 0xff9800; // Осень (рыжий)
-        if (treeData.harvested) leafColor = 0x8d6e63; // Собрано (коричневый)
-        const leavesGeom = new THREE.ConeGeometry(15, 50, 8)
-        // const leavesMat = new THREE.MeshStandardMaterial({ color: 0x2e7d32 })
-
-        const leavesMat = new THREE.MeshStandardMaterial({ color: leafColor }) 
-        const leaves = new THREE.Mesh(leavesGeom, leavesMat)
-
-        leaves.position.y = 45
-        group.add(leaves)
-
+            let leafColor = 0x2e7d32
+            if (season === 'AUTUMN') leafColor = 0xff9800
+            if (treeData.harvested) leafColor = 0x8d6e63 // Коричневый (голые ветки)
+            
+            const leaves = new THREE.Mesh(new THREE.ConeGeometry(15, 50, 8), new THREE.MeshStandardMaterial({ color: leafColor }))
+            leaves.position.y = 45
+            group.add(leaves)
+        }
+        
         scene.add(group)
       })
     }
   }, [trees, season])
 
+  // ГРЯДКИ 
+  useEffect(() => {
+      const scene = sceneRef.current; if (!scene) return;
+      const old = []; scene.traverse(o => { if (o.name === 'garden_bed') old.push(o) });
+      old.forEach(t => scene.remove(t));
+      
+      if (gardenBeds && gardenBeds.length > 0) {
+          gardenBeds.forEach(bed => {
+              const group = new THREE.Group()
+              group.name = 'garden_bed'
+              group.position.set(bed.x, 0, bed.y)
+
+              // Основа грядки (земля)
+              const earth = new THREE.Mesh(
+                  new THREE.BoxGeometry(bed.width, 5, bed.height),
+                  new THREE.MeshStandardMaterial({ color: 0x5d4037 }) // Темно-коричневый
+              )
+              earth.position.y = 2.5
+              group.add(earth)
+
+              // Растения (если не собраны)
+              if (!bed.harvested) {
+                  // Цвет: Морковь (Оранжевый) / Картошка (Зеленый)
+                  const plantColor = bed.type === 'carrot' ? 0xff6d00 : 0x2e7d32
+                  // Создаем несколько мелких элементов сверху
+                  for(let i=-1; i<=1; i++){
+                      const plant = new THREE.Mesh(
+                          new THREE.ConeGeometry(3, 8, 5),
+                          new THREE.MeshStandardMaterial({ color: plantColor })
+                      )
+                      plant.position.set(i * 8, 8, 0)
+                      group.add(plant)
+                  }
+              }
+              
+              scene.add(group)
+          })
+      }
+  }, [gardenBeds])
+
+  // --- ГАРАЖИ ---
   useEffect(() => {
     const scene = sceneRef.current; if (!scene) return;
-    const oldGarages = []; scene.traverse(obj => { if (obj.name === 'garage_mesh') oldGarages.push(obj) });
-    oldGarages.forEach(t => scene.remove(t));
-
-    if (garages && garages.length > 0) {
-        garages.forEach(g => {
-            // Рисуем гараж как серый параллелепипед
-            const geometry = new THREE.BoxGeometry(g.width, 30, g.height);
-            const material = new THREE.MeshStandardMaterial({ color: 0x757575 }); // Серый
-            const mesh = new THREE.Mesh(geometry, material);
-            mesh.position.set(g.x, 15, g.y); // Высота 30/2 = 15
-            mesh.name = 'garage_mesh';
-            mesh.castShadow = true;
-            scene.add(mesh);
-        })
-    }
+    const old = []; scene.traverse(o => { if (o.name === 'garage_mesh') old.push(o) });
+    old.forEach(t => scene.remove(t));
+    if (garages) garages.forEach(g => {
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(g.width, 30, g.height), new THREE.MeshStandardMaterial({ color: 0x757575 }))
+        mesh.position.set(g.x, 15, g.y); mesh.name = 'garage_mesh'; mesh.castShadow = true; scene.add(mesh)
+    })
   }, [garages])
 
-  // обновление дома
+  // --- ДОМ + CCTV ---
   useEffect(() => {
-    const scene = sceneRef.current
-    if (!scene) return
-
-    if (houseRef.current) {
-      scene.remove(houseRef.current)
-      houseRef.current = null
-    }
+    const scene = sceneRef.current; if (!scene) return;
+    if (houseRef.current) { scene.remove(houseRef.current); houseRef.current = null; }
 
     if (house) {
+      const group = new THREE.Group()
+      group.position.set(house.x, 0, house.y)
+
       const loader = new GLTFLoader()
-      loader.load(
-        '/models/house.glb', 
-        (gltf) => {
+      loader.load('/models/house.glb', (gltf) => {
           const model = gltf.scene
-          model.position.set(house.x, 0, house.y)
-          
-          const scaleFactor = houseConfig.w / 5; // Коэффициент масштаба
-          model.scale.set(scaleFactor, scaleFactor, scaleFactor); // Равномерное масштабирование
-          // const scaleX = houseConfig.w / 5 
-          // const scaleZ = houseConfig.h / 5
-          // model.scale.set(scaleX, 40, scaleZ)
+          const scale = houseConfig.w / 5
+          model.scale.set(scale, scale, scale)
+          model.traverse(c => { if(c.isMesh) c.castShadow = true })
+          group.add(model)
+      }, undefined, () => {
+          const cube = new THREE.Mesh(new THREE.BoxGeometry(houseConfig.w, 50, houseConfig.h), new THREE.MeshStandardMaterial({ color: 0xff5722 }))
+          cube.position.y = 25
+          group.add(cube)
+      })
 
-          model.traverse((child) => {
-            if (child.isMesh) child.castShadow = true
-          })
+      if (cctv) {
+          const camMesh = new THREE.Mesh(new THREE.SphereGeometry(5, 16, 16), new THREE.MeshBasicMaterial({ color: 0x2979ff }))
+          camMesh.position.set(0, 40, 0) 
+          group.add(camMesh)
+      }
 
-          scene.add(model)
-          houseRef.current = model
-        },
-        undefined, 
-        (error) => {
-          // Фолбек куб
-          const geometry = new THREE.BoxGeometry(houseConfig.w, 50, houseConfig.h) 
-          const material = new THREE.MeshStandardMaterial({ color: 0xff5722 })
-          const cube = new THREE.Mesh(geometry, material)
-          cube.position.set(house.x, 25, house.y)
-          scene.add(cube)
-          houseRef.current = cube
-        }
-      )
+      scene.add(group)
+      houseRef.current = group
     }
-  }, [house, houseConfig])
+  }, [house, houseConfig, cctv])
 
   return <div ref={mountRef} className="scene-container" />
 }
