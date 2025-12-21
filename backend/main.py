@@ -24,9 +24,6 @@ app = FastAPI()
 #         "rule": e.rule
 #         }
 
-
-
-# Настройка CORS (чтобы React с 5173 мог стучаться на 8000)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # В продакшене лучше указать конкретный домен

@@ -1,3 +1,4 @@
+// Scene3D.jsx
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'
@@ -6,7 +7,8 @@ import { createFallbackAppleTree, createRoofEquipment } from './SceneHelpers.jsx
 
 export default function Scene3D({ 
   season, house, trees, garages, gardenBeds, cctv, viewMode, onPlotClick, 
-  plotSize = { w: 800, h: 800 }, houseConfig = { w: 100, h: 100 } 
+  plotSize = { w: 800, h: 800 }, houseConfig = { w: 100, h: 100 }, onZoomIn,
+  onZoomOut, 
 }) {
   const mountRef = useRef(null)
   const sceneRef = useRef(null)
@@ -14,6 +16,28 @@ export default function Scene3D({
   const cameraRef = useRef(null)
   const onPlotClickRef = useRef(onPlotClick)
   const hemiLightRef = useRef(null);
+
+  const zoomIn = () => {
+    if (!cameraRef.current) return;
+    const camera = cameraRef.current;
+    // Уменьшаем distance до цели (0,0,0)
+    const target = new THREE.Vector3(0, 0, 0);
+    const dir = new THREE.Vector3();
+    dir.subVectors(camera.position, target).normalize();
+    camera.position.addScaledVector(dir, -50); // приблизить на 50 единиц
+    camera.lookAt(target);
+    if (onZoomIn) onZoomIn();
+  };
+  const zoomOut = () => {
+    if (!cameraRef.current) return;
+    const camera = cameraRef.current;
+    const target = new THREE.Vector3(0, 0, 0);
+    const dir = new THREE.Vector3();
+    dir.subVectors(camera.position, target).normalize();
+    camera.position.addScaledVector(dir, 50); // отдалить на 50 единиц
+    camera.lookAt(target);
+    if (onZoomOut) onZoomOut();
+  };
 
 
   useEffect(() => { onPlotClickRef.current = onPlotClick }, [onPlotClick])
@@ -36,9 +60,18 @@ export default function Scene3D({
     scene.add(hemiLight);
     hemiLightRef.current = hemiLight; 
 
+    
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    dirLight.position.set(500, 800, 300); // выше и дальше — мягче тени
+    dirLight.castShadow = true;
+    // Настройка теней (чтобы не было "пиксельных" артефактов)
+    dirLight.shadow.mapSize.width = 2048;
+    dirLight.shadow.mapSize.height = 2048;
+    dirLight.shadow.camera.far = 2000;
+    scene.add(dirLight);
     // const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.8); hemiLight.position.set(0, 200, 0); scene.add(hemiLight)
     // const dirLight = new THREE.DirectionalLight(0xffffff, 1); dirLight.position.set(100, 200, 100); dirLight.castShadow = true; scene.add(dirLight)
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1.5); dirLight.position.set(100, 200, 100); dirLight.castShadow = true; scene.add(dirLight)
+    // const dirLight = new THREE.DirectionalLight(0xffffff, 1.5); dirLight.position.set(100, 200, 100); dirLight.castShadow = true; scene.add(dirLight)
 
 
     const raycaster = new THREE.Raycaster(); const mouse = new THREE.Vector2()
@@ -61,6 +94,13 @@ export default function Scene3D({
     window.addEventListener('resize', handleResize)
     return () => { window.removeEventListener('click', onMouseClick); window.removeEventListener('resize', handleResize); cancelAnimationFrame(animationId); if (mountRef.current) mountRef.current.innerHTML = '' }
   }, []) 
+  
+  useEffect(() => {
+    if (onZoomIn && onZoomOut) {
+      onZoomIn(zoomIn);
+      onZoomOut(zoomOut);
+    }
+  }, [onZoomIn, onZoomOut]);
 
   // --- УПРАВЛЕНИЕ КАМЕРОЙ (2D/3D) ---
   useEffect(() => {
@@ -75,18 +115,29 @@ export default function Scene3D({
           camera.lookAt(0, 0, 0) 
       }
   }, [viewMode])
-
-  // --- ОСВЕЩЕНИЕ ПО СЕЗОНАМ ---
   useEffect(() => {
     const hemi = hemiLightRef.current;
     if (!hemi) return;
 
     if (season === 'WINTER') {
-      hemi.groundColor.setHex(0xffffff); // белый отражённый свет → белый снег
+      hemi.intensity = 1.0; 
+      hemi.groundColor.setHex(0xf0f0f0); // чуть тёплый белый (не чистый 0xffffff)
     } else {
-      hemi.groundColor.setHex(0x444444); // стандартный
+      hemi.intensity = 0.8;
+      hemi.groundColor.setHex(0x909060); // светло-серо-зелёный — естественнее для травы
     }
   }, [season]);
+  // --- ОСВЕЩЕНИЕ ПО СЕЗОНАМ ---
+  // useEffect(() => {
+  //   const hemi = hemiLightRef.current;
+  //   if (!hemi) return;
+
+  //   if (season === 'WINTER') {
+  //     hemi.groundColor.setHex(0xffffff); // белый отражённый свет → белый снег
+  //   } else {
+  //     hemi.groundColor.setHex(0x444444); // стандартный
+  //   }
+  // }, [season]);
 
 
   // --- ЗЕМЛЯ ---
@@ -103,21 +154,35 @@ export default function Scene3D({
     toRemove.forEach(c => scene.remove(c));
 
     // Земля
-    const groundColor = season === 'WINTER' ? 0xffffff : 0x81c784;
+
+    // В useEffect для земли:
+    const groundColor = season === 'WINTER' 
+      ? 0xf8f8f8   // не чистый белый, а чуть тёплый — выглядит как снег
+      : 0x88cc88;  // чуть ярче оригинального 0x81c784
 
     const ground = new THREE.Mesh(
       new THREE.PlaneGeometry(plotSize.w, plotSize.h),
       new THREE.MeshStandardMaterial({
         color: groundColor,
-        roughness: season === 'WINTER' ? 0.4 : 0.8,
+        roughness: season === 'WINTER' ? 0.9 : 0.95, // ← снег матовый! (0.9 — не 0.4)
         metalness: 0,
       })
+    );
+    // const groundColor = season === 'WINTER' ? 0xffffff : 0x81c784;
+
+    // const ground = new THREE.Mesh(
+    //   new THREE.PlaneGeometry(plotSize.w, plotSize.h),
+    //   new THREE.MeshStandardMaterial({
+    //     color: groundColor,
+    //     roughness: season === 'WINTER' ? 0.4 : 0.8,
+    //     metalness: 0,
+    //   })
 
       // new THREE.MeshStandardMaterial({
       //   color: groundColor,
       //   roughness: 0.8
       // })
-    );
+    // );
 
     // const groundColor = season === 'WINTER' ? 0xfff : 0x81c784;
     // const ground = new THREE.Mesh(
@@ -150,6 +215,7 @@ export default function Scene3D({
   //   scene.add(new THREE.GridHelper(Math.max(plotSize.w, plotSize.h), 20))
   // }, [plotSize, season])
 
+
   // --- ДЕРЕВЬЯ ---
   useEffect(() => {
     const scene = sceneRef.current; if (!scene) return;
@@ -162,25 +228,80 @@ export default function Scene3D({
       trees.forEach(treeData => {
         const group = new THREE.Group(); group.name = 'tree_group'; group.position.set(treeData.x, 0, treeData.y)
 
+        // if (treeData.type === 'apple') {
+        //      // ЯБЛОНЯ
+        //     loader.load('/models/apple_tree.glb', (gltf) => {
+        //         const model = gltf.scene.clone(); 
+        //         model.scale.set(15, 15, 15); // Чуть крупнее
+        //         if (treeData.harvested) model.visible = false;
+        //         group.add(model);
+        //         console.log("Apple model bounding box:", new THREE.Box3().setFromObject(model));
+        //         model.traverse(child => {
+        //           if (child.isMesh) {
+        //             child.castShadow = true;
+        //             child.receiveShadow = true;
+        //           }
+        //           });
+        //         console.log("Apple tree loaded successfully");
+        //     }, undefined, (err) => {console.error("Error loading apple tree model:", err);
+        //         console.log("Fallback apple tree used");
+        //         const fallback = createFallbackAppleTree()
+        //         // Если собрано - скрываем яблоки 
+        //         if (treeData.harvested) {
+        //             // Можно удалить красные яблоки из группы fallback
+        //             fallback.children = fallback.children.filter(c => c.geometry.type !== 'SphereGeometry' || c.material.color.getHex() !== 0xd50000)
+        //         }
+        //         group.add(fallback)
+        //     })
+        // }
         if (treeData.type === 'apple') {
-             // ЯБЛОНЯ
-             loader.load('/models/apple_tree.glb', (gltf) => {
-                 const model = gltf.scene.clone(); 
-                 model.scale.set(15, 15, 15) // Чуть крупнее
-                 if (treeData.harvested) model.visible = false
-                 group.add(model)
-             }, undefined, (err) => {
-                 // ОШИБКА ЗАГРУЗКИ -> ЗАГЛУШКА
-                 console.log("Fallback apple tree used")
-                 const fallback = createFallbackAppleTree()
-                 // Если собрано - скрываем яблоки (или всё дерево, по желанию)
-                 if (treeData.harvested) {
-                     // Можно удалить красные яблоки из группы fallback
-                     fallback.children = fallback.children.filter(c => c.geometry.type !== 'SphereGeometry' || c.material.color.getHex() !== 0xd50000)
-                 }
-                 group.add(fallback)
-             })
-        } else {
+          loader.load('/models/apple_tree.glb', (gltf) => {
+            const model = gltf.scene.clone();
+
+            // --- ВАЖНО: центровка по Y, чтобы низ модели был на уровне земли (y=0) ---
+            const box = new THREE.Box3().setFromObject(model);
+            const offsetY = -box.min.y; // поднимаем на |min.y|, чтобы min.y стал 0
+            model.position.y = offsetY;
+
+            // Лог для проверки
+            const newSize = box.getSize(new THREE.Vector3());
+            console.log(` Apple tree: size=${newSize.x.toFixed(1)}×${newSize.y.toFixed(1)}×${newSize.z.toFixed(1)}, offset Y=${offsetY.toFixed(1)}`);
+
+            // Масштаб (15 — много для некоторых моделей; начните с 5-10)
+            model.scale.set(150, 150, 150);
+
+            // Принудительная настройка материалов (убираем прозрачность/неправильные шейдеры)
+            model.traverse(child => {
+              if (child.isMesh) {
+                if (child.material) {
+                  // Отключаем alphaTest и transparent, если вдруг модель "прозрачная"
+                  if (Array.isArray(child.material)) {
+                    child.material.forEach(m => {
+                      m.transparent = false;
+                      m.opacity = 1;
+                      m.depthWrite = true;
+                    });
+                  } else {
+                    child.material.transparent = false;
+                    child.material.opacity = 1;
+                    child.material.depthWrite = true;
+                  }
+                }
+                child.castShadow = true;
+                child.receiveShadow = true;
+              }
+            });
+
+            // if (treeData.harvested) model.visible = false;
+            group.add(model);
+            scene.add(group);
+          }, undefined, (err) => {
+            console.error(" Apple tree load failed → using fallback", err);
+            group.add(createFallbackAppleTree());
+            scene.add(group);
+          });
+        }
+        else {
             // ОБЫЧНОЕ
             const trunk = new THREE.Mesh(new THREE.CylinderGeometry(5, 5, 20), new THREE.MeshStandardMaterial({ color: 0x8d6e63 }))
             trunk.position.y = 10; group.add(trunk)

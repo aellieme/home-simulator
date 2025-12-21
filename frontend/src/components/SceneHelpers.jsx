@@ -1,3 +1,4 @@
+// SceneHelper.jsx
 import * as THREE from 'three'
 
 export function createFallbackAppleTree() {
@@ -21,8 +22,8 @@ export function createFallbackAppleTree() {
 
     // Яблоки (Красные сферы)
     const appleGeo = new THREE.SphereGeometry(2.5, 8, 8)
-    const appleMat = new THREE.MeshBasicMaterial({ color: 0xd50000 })
-    
+    // const appleMat = new THREE.MeshBasicMaterial({ color: 0xd50000 })
+    const appleMat = new THREE.MeshStandardMaterial({ color: 0xd50000, metalness: 0, roughness: 0.8 })
     const positions = [
         [10, 30, 8], [-10, 25, 5], [2, 38, -5], 
         [0, 22, 14], [-12, 32, -5], [8, 20, -10]
@@ -42,23 +43,23 @@ export function createRoofEquipment() {
     const group = new THREE.Group()
     
     // --- КАМЕРА (Синяя сфера на ножке) ---
-    const camGroup = new THREE.Group()
-    camGroup.position.set(-10, 0, 10) // Сдвиг влево
+    // const camGroup = new THREE.Group()
+    // camGroup.position.set(-10, 0, 10) // Сдвиг влево
     
-    const leg = new THREE.Mesh(
-        new THREE.CylinderGeometry(1, 1, 10),
-        new THREE.MeshStandardMaterial({ color: 0x212121 })
-    )
-    leg.position.y = 5
-    camGroup.add(leg)
+    // const leg = new THREE.Mesh(
+    //     new THREE.CylinderGeometry(1, 1, 10),
+    //     new THREE.MeshStandardMaterial({ color: 0x212121 })
+    // )
+    // leg.position.y = 5
+    // camGroup.add(leg)
 
-    const camHead = new THREE.Mesh(
-        new THREE.SphereGeometry(5, 16, 16),
-        new THREE.MeshBasicMaterial({ color: 0x2979ff }) // Ярко-синий
-    )
-    camHead.position.y = 10
-    camGroup.add(camHead)
-    group.add(camGroup)
+    // const camHead = new THREE.Mesh(
+    //     new THREE.SphereGeometry(5, 16, 16),
+    //     new THREE.MeshBasicMaterial({ color: 0x2979ff }) // Ярко-синий
+    // )
+    // camHead.position.y = 10
+    // camGroup.add(camHead)
+    // group.add(camGroup)
 
     // --- АНТЕННА (Как вы просили: штырь с перекладинами) ---
     const antGroup = new THREE.Group()

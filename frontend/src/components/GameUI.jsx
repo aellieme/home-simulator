@@ -68,11 +68,20 @@ export default function GameUI({
           <div className="section-label">Настройки участка</div>
           <div className="input-group">
             <div className="input-row">
+              {/* <span>Ширина участка (м)</span>
+                <input
+                  type="number"
+                  value={plotSize.w / 10}
+                  onChange={e =>
+                    setPlotSize({ ...plotSize, w: +e.target.value * 10 })
+                  }
+                /> */}
+
               <span>Ширина участка (м)</span>
               <input 
                 type="number" 
                 className="styled-input"
-                value={plotSize.w} 
+                value={plotSize.w/10} 
                 onChange={e => setPlotSize({...plotSize, w: +e.target.value})} 
               />
             </div>
@@ -81,7 +90,7 @@ export default function GameUI({
               <input 
                 type="number" 
                 className="styled-input"
-                value={plotSize.h} 
+                value={plotSize.h/10} 
                 onChange={e => setPlotSize({...plotSize, h: +e.target.value})} 
               />
             </div>
@@ -90,8 +99,8 @@ export default function GameUI({
               <input 
                 type="number" 
                 className="styled-input"
-                value={houseConfig.w} 
-                onChange={e => setHouseConfig({w: +e.target.value, h: +e.target.value})} 
+                value={houseConfig.w/10} 
+                onChange={e => setHouseConfig({w: +e.target.value * 10, h: +e.target.value* 10})} 
               />
             </div>
           </div>
@@ -124,42 +133,42 @@ export default function GameUI({
               className={`tool-card ${activeTool === 'TREE' ? 'active' : ''}`}
               onClick={() => setActiveTool('TREE')}
             >
-              <span className="tool-icon">🌳</span>
-              <span className="tool-name">Дуб</span>
+              {/* <span className="tool-icon">🌳</span> */}
+              <span className="tool-name">Лиственница</span>
             </button>
             <button
             className={`tool-card ${activeTool === 'APPLE' ? 'active' : ''}`}
               onClick={() => setActiveTool('APPLE')}
             >
-              <span className="tool-icon">🍎</span>
+              {/* <span className="tool-icon">🍎</span> */}
               <span className="tool-name">Яблоня</span>
             </button>
             <button 
               className={`tool-card ${activeTool === 'GARAGE' ? 'active' : ''}`}
               onClick={() => setActiveTool('GARAGE')}
             >
-              <span className="tool-icon">🛖</span>
+              {/* <span className="tool-icon">🛖</span> */}
               <span className="tool-name">Гараж</span>
             </button>
             <button 
               className={`tool-card ${activeTool === 'CARROT' ? 'active' : ''}`}
               onClick={() => setActiveTool('CARROT')}
             >
-              <span className="tool-icon">🥕</span>
+              {/* <span className="tool-icon">🥕</span> */}
               <span className="tool-name">Морковь</span>
             </button>
             <button 
               className={`tool-card ${activeTool === 'POTATO' ? 'active' : ''}`}
               onClick={() => setActiveTool('POTATO')}
             >
-              <span className="tool-icon">🥔</span>
+              {/* <span className="tool-icon">🥔</span> */}
               <span className="tool-name">Картофель</span>
             </button>
             <button 
               className={`tool-card eraser ${activeTool === 'ERASER' ? 'active' : ''}`}
               onClick={() => setActiveTool('ERASER')}
             >
-              <span className="tool-icon">✖️</span>
+              {/* <span className="tool-icon">✖️</span> */}
               <span className="tool-name">Удалить</span>
             </button>
           </div>
@@ -171,7 +180,7 @@ export default function GameUI({
         <div className="ui-section">
           <div className="section-label">Итоги сезона</div>
           <ul className="stats-list">
-             <li><span> Листья</span> <span className="stat-val">{harvestStats.leaves}</span></li>
+             <li><span> Иголки</span> <span className="stat-val">{harvestStats.leaves}</span></li>
              <li><span> Яблоки</span> <span className="stat-val">{harvestStats.apples}</span></li>
              <li><span> Морковь</span> <span className="stat-val">{harvestStats.carrots}</span></li>
              <li><span> Картофель</span> <span className="stat-val">{harvestStats.potatoes}</span></li>
@@ -182,7 +191,7 @@ export default function GameUI({
                className={`secondary-btn ${cctv ? 'active' : ''}`}
                onClick={() => setCctv(!cctv)}
              >
-               {cctv ? ' Система безопасности активна' : ' Установить видеонаблюдение'}
+               {cctv ? ' Антенна поставлена' : ' Установить антенну для связи'}
              </button>
           ) : (
             <div className="ui-subtitle" style={{textAlign: 'center'}}>Постройте дом весной, чтобы улучшать его.</div>

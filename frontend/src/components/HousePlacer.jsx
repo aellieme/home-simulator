@@ -13,7 +13,7 @@ export default function HousePlacer({ setMessage }) {
 
     const res = await checkHouse(plot, house)
 
-    if (!res.ok) {
+    if (!res.success) {   // <-- изменили с res.ok на res.success
       setMessage(res)
       setPlacedHouse(null)
     } else {
@@ -38,6 +38,14 @@ export default function HousePlacer({ setMessage }) {
         onChange={e => setY(+e.target.value)}
       />
       <button onClick={placeHouse}>Разместить дом</button>
+
+      {/* Вывод сообщения об ошибке и нормы */}
+      {setMessage && (
+        <div style={{ marginTop: '10px', color: 'red' }}>
+          {setMessage.message && <p>{setMessage.message}</p>}
+          {setMessage.rule && <small>{setMessage.rule}</small>}
+        </div>
+      )}
 
       <h3>3D визуализация</h3>
       <Scene3D house={placedHouse} />

@@ -317,3 +317,27 @@
   background: #2C3E2D;
   color: #fff;
 }
+.zoom-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid #EFEDE8;
+  font-size: 20px;
+  font-weight: bold;
+  color: #2C3E2D;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  transition: all 0.2s;
+}
+.zoom-btn:hover {
+  background: #fff;
+  transform: scale(1.05);
+  border-color: #2C3E2D;
+}
+.zoom-btn:active {
+  transform: scale(0.95);
+}
