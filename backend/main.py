@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 # from models import PlacementRequest
 from pydantic import BaseModel
+from typing import List
 from norms import check_house, NormViolation, check_tree, check_garage, check_garden_bed
 
 app = FastAPI()
@@ -47,6 +48,7 @@ class HouseModel(BaseModel):
 class CheckRequest(BaseModel):
     plot: PlotModel
     house: HouseModel
+    others: List[HouseModel]
     
 class TreeRequestModel(BaseModel):
     x: float
@@ -55,10 +57,12 @@ class TreeRequestModel(BaseModel):
 class CheckTreeRequest(BaseModel):
     plot: PlotModel
     tree: TreeRequestModel
+    others: List[HouseModel]
 
 class GarageRequest(BaseModel):
     plot: PlotModel
     garage: HouseModel # Используем ту же структуру, что у дома (x,y,w,h)
+    others: List[HouseModel]
 
 @app.post("/check-house")
 async def check_house_endpoint(data: CheckRequest):
@@ -72,7 +76,7 @@ async def check_house_endpoint(data: CheckRequest):
     try:
         # data.plot и data.house — это уже готовые объекты с атрибутами x, y, width...
         # Просто передаем их в вашу логику проверки
-        check_house(data.plot, data.house)
+        check_house(data.plot, data.house, data.others)
         
         # Если функция check_house выполнилась без ошибок:
         return {
@@ -105,7 +109,7 @@ async def check_tree_endpoint(data: CheckTreeRequest):
             width = 20 # Фиксированный размер
             height = 20
         
-        check_tree(data.plot, TreeObj)
+        check_tree(data.plot, TreeObj, data.others)
         
         return {"violation": False, "message": "OK"}
 
@@ -119,7 +123,7 @@ async def check_tree_endpoint(data: CheckTreeRequest):
 @app.post("/check-garage")
 async def check_garage_endpoint(data: GarageRequest):
     try:
-        check_garage(data.plot, data.garage)
+        check_garage(data.plot, data.garage, data.others)
         return {"violation": False, "message": "OK"}
     except NormViolation as e:
         return {"violation": True, "message": e.message, "rule": e.rule}
@@ -127,7 +131,7 @@ async def check_garage_endpoint(data: GarageRequest):
 @app.post("/check-garden-bed")
 async def check_garden_bed_endpoint(data: GarageRequest): 
     try:
-        check_garden_bed(data.plot, data.garage)
+        check_garden_bed(data.plot, data.garage, data.others)
         return {"violation": False, "message": "OK"}
     except NormViolation as e:
         return {"violation": True, "message": e.message, "rule": e.rule}
