@@ -1,0 +1,319 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&family=Lora:ital,wght@0,500;0,700;1,500&display=swap');
+
+/* --- Основной контейнер (Карточка) --- */
+.game-ui-card {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  width: 380px;
+  max-width: 90vw;
+  background: rgba(253, 251, 247, 0.92); /* Кремовый полупрозрачный */
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  border-radius: 24px;
+  padding: 24px;
+  box-shadow: 
+    0 10px 40px rgba(79, 109, 83, 0.08),
+    0 4px 12px rgba(0, 0, 0, 0.03);
+  font-family: 'Nunito', sans-serif;
+  color: #3D3D3D;
+  transition: all 0.3s ease;
+  pointer-events: auto;
+  overflow: hidden;
+}
+
+/* Свернутое состояние */
+.game-ui-card.collapsed {
+  width: auto;
+  padding: 12px 20px;
+  border-radius: 50px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+/* --- Заголовки --- */
+.ui-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.ui-title {
+  font-family: 'Lora', serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: #2C3E2D; /* Темно-зеленый */
+  margin: 0;
+}
+
+.ui-subtitle {
+  font-size: 13px;
+  color: #8A9A8B;
+  margin: 4px 0 0 0;
+}
+
+/* --- Кнопка сворачивания --- */
+.collapse-btn {
+  background: transparent;
+  border: none;
+  color: #8A9A8B;
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+  padding: 5px;
+  transition: color 0.2s;
+}
+.collapse-btn:hover {
+  color: #2C3E2D;
+}
+
+/* --- Сезоны (Табы) --- */
+.season-tabs {
+  display: flex;
+  background: #EFEDE8;
+  border-radius: 16px;
+  padding: 4px;
+  margin-bottom: 25px;
+}
+
+.season-tab {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 8px 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #9CA59C;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.season-tab.active {
+  background: #fff;
+  color: #2C3E2D;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+/* Цветовые акценты для активных сезонов */
+.season-tab.active[data-season="WINTER"] { color: #5D8AA8; }
+.season-tab.active[data-season="SPRING"] { color: #66BB6A; }
+.season-tab.active[data-season="SUMMER"] { color: #E89F71; }
+.season-tab.active[data-season="AUTUMN"] { color: #D87D4A; }
+
+/* --- Секции контента --- */
+.ui-section {
+  animation: fadeIn 0.4s ease;
+}
+
+.section-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #8A9A8B;
+  margin-bottom: 12px;
+  font-weight: 800;
+}
+
+/* --- Инпуты (Зима) --- */
+.input-group {
+  margin-bottom: 15px;
+}
+.input-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fff;
+  border: 1px solid #EFEDE8;
+  padding: 10px 15px;
+  border-radius: 12px;
+  margin-bottom: 8px;
+}
+.input-row span {
+  font-weight: 600;
+  font-size: 14px;
+}
+.styled-input {
+  border: none;
+  background: #F9F8F4;
+  padding: 6px 10px;
+  border-radius: 8px;
+  width: 60px;
+  text-align: center;
+  font-weight: 700;
+  color: #2C3E2D;
+  outline: none;
+}
+.styled-input:focus {
+  box-shadow: 0 0 0 2px #E89F71;
+}
+
+/* --- Инструменты (Лето) --- */
+.tools-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.tool-card {
+  background: #fff;
+  border: 1px solid #EFEDE8;
+  border-radius: 16px;
+  padding: 15px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.tool-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+  border-color: #D6D6D6;
+}
+
+.tool-card.active {
+  border: 2px solid #2C3E2D;
+  background: #967f72;
+}
+
+.tool-card.eraser {
+  border-color: #FFCDD2;
+  color: #D32F2F;
+}
+.tool-card.eraser.active {
+  background: #FFEBEE;
+  border-color: #D32F2F;
+}
+
+.tool-icon {
+  font-size: 24px;
+  line-height: 1;
+}
+.tool-name {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* --- Статистика (Осень) --- */
+.stats-list {
+  background: #fff;
+  border-radius: 16px;
+  padding: 15px;
+  list-style: none;
+  margin: 0 0 15px 0;
+}
+.stats-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px dashed #d6d4ce;
+  font-size: 14px;
+}
+.stats-list li:last-child {
+  border-bottom: none;
+}
+.stat-val {
+  font-weight: 800;
+  color: #D87D4A;
+}
+
+/* --- Кнопки действий (Primary) --- */
+.primary-btn {
+  width: 100%;
+  background: #2C3E2D;
+  color: #FAF9F6;
+  border: none;
+  padding: 14px;
+  border-radius: 14px;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 8px 20px rgba(44, 62, 45, 0.25);
+}
+.primary-btn:hover {
+  background: #3A523C;
+  transform: translateY(-2px);
+}
+.secondary-btn {
+  width: 100%;
+  background: #fff;
+  border: 2px solid #EFEDE8;
+  color: #2C3E2D;
+  padding: 12px;
+  border-radius: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.secondary-btn.active {
+  border-color: #2C3E2D;
+  background: #cfd1cf;
+}
+
+/* --- Нижняя кнопка завершения --- */
+.finish-btn-container {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: auto;
+  z-index: 10;
+}
+.finish-btn {
+  background: #E89F71;
+  color: #fff;
+  border: none;
+  padding: 12px 32px;
+  border-radius: 50px;
+  font-family: 'Lora', serif;
+  font-weight: 700;
+  font-size: 16px;
+  cursor: pointer;
+  box-shadow: 0 10px 25px rgba(232, 159, 113, 0.4);
+  transition: all 0.3s;
+}
+.finish-btn:hover {
+  transform: translateX(-50%) scale(1.05);
+  background: #D87D4A;
+}
+
+/* Анимации */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Виджет 2D/3D переключателя */
+.view-toggle {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: rgba(255,255,255,0.9);
+  padding: 5px;
+  border-radius: 12px;
+  display: flex;
+  gap: 5px;
+  pointer-events: auto;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+}
+.toggle-opt {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 800;
+  color: #8A9A8B;
+  cursor: pointer;
+}
+.toggle-opt.active {
+  background: #2C3E2D;
+  color: #fff;
+}

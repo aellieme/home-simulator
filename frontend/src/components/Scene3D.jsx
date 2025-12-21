@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader'
-// Импортируем наши новые помощники
-import { createFallbackAppleTree, createRoofEquipment } from 'frontend/src/components/SceneHelpers.jsx'
+import { createFallbackAppleTree, createRoofEquipment } from './SceneHelpers.jsx'
+
 
 export default function Scene3D({ 
   season, house, trees, garages, gardenBeds, cctv, viewMode, onPlotClick, 
@@ -13,10 +13,11 @@ export default function Scene3D({
   const houseRef = useRef(null)
   const cameraRef = useRef(null)
   const onPlotClickRef = useRef(onPlotClick)
+  const hemiLightRef = useRef(null);
+
 
   useEffect(() => { onPlotClickRef.current = onPlotClick }, [onPlotClick])
 
-  // --- ИНИЦИАЛИЗАЦИЯ ---
   useEffect(() => {
     const width = window.innerWidth; const height = window.innerHeight
     const scene = new THREE.Scene(); scene.background = new THREE.Color(0xe0f7fa); sceneRef.current = scene
@@ -25,11 +26,20 @@ export default function Scene3D({
     camera.position.set(0, 600, 800); camera.lookAt(0, 0, 0)
     
     const renderer = new THREE.WebGLRenderer({ antialias: true })
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+
     renderer.setSize(width, height); renderer.shadowMap.enabled = true
     if (mountRef.current) { mountRef.current.innerHTML = ''; mountRef.current.appendChild(renderer.domElement) }
 
-    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.8); hemiLight.position.set(0, 200, 0); scene.add(hemiLight)
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1); dirLight.position.set(100, 200, 100); dirLight.castShadow = true; scene.add(dirLight)
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.8);
+    hemiLight.position.set(0, 200, 0);
+    scene.add(hemiLight);
+    hemiLightRef.current = hemiLight; 
+
+    // const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.8); hemiLight.position.set(0, 200, 0); scene.add(hemiLight)
+    // const dirLight = new THREE.DirectionalLight(0xffffff, 1); dirLight.position.set(100, 200, 100); dirLight.castShadow = true; scene.add(dirLight)
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.5); dirLight.position.set(100, 200, 100); dirLight.castShadow = true; scene.add(dirLight)
+
 
     const raycaster = new THREE.Raycaster(); const mouse = new THREE.Vector2()
     const onMouseClick = (event) => {
@@ -66,15 +76,79 @@ export default function Scene3D({
       }
   }, [viewMode])
 
+  // --- ОСВЕЩЕНИЕ ПО СЕЗОНАМ ---
+  useEffect(() => {
+    const hemi = hemiLightRef.current;
+    if (!hemi) return;
+
+    if (season === 'WINTER') {
+      hemi.groundColor.setHex(0xffffff); // белый отражённый свет → белый снег
+    } else {
+      hemi.groundColor.setHex(0x444444); // стандартный
+    }
+  }, [season]);
+
+
   // --- ЗЕМЛЯ ---
   useEffect(() => {
-    const scene = sceneRef.current; if (!scene) return;
-    const toRemove = []; scene.traverse(c => { if (c.name === 'ground' || c.type === 'GridHelper') toRemove.push(c) });
+    const scene = sceneRef.current;
+    if (!scene) return;
+
+    const toRemove = [];
+    scene.traverse(c => {
+      if (c.name === 'ground' || c.type === 'GridHelper') {
+        toRemove.push(c);
+      }
+    });
     toRemove.forEach(c => scene.remove(c));
-    const ground = new THREE.Mesh(new THREE.PlaneGeometry(plotSize.w, plotSize.h), new THREE.MeshStandardMaterial({ color: 0x81c784 }))
-    ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; ground.name = "ground"; scene.add(ground)
-    scene.add(new THREE.GridHelper(Math.max(plotSize.w, plotSize.h), 20))
-  }, [plotSize])
+
+    // Земля
+    const groundColor = season === 'WINTER' ? 0xffffff : 0x81c784;
+
+    const ground = new THREE.Mesh(
+      new THREE.PlaneGeometry(plotSize.w, plotSize.h),
+      new THREE.MeshStandardMaterial({
+        color: groundColor,
+        roughness: season === 'WINTER' ? 0.4 : 0.8,
+        metalness: 0,
+      })
+
+      // new THREE.MeshStandardMaterial({
+      //   color: groundColor,
+      //   roughness: 0.8
+      // })
+    );
+
+    // const groundColor = season === 'WINTER' ? 0xfff : 0x81c784;
+    // const ground = new THREE.Mesh(
+    //   new THREE.PlaneGeometry(plotSize.w, plotSize.h),
+    //   new THREE.MeshStandardMaterial({ color: groundColor, roughness: 0.8 })
+    // );
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    ground.name = 'ground';
+    scene.add(ground);
+
+    // Сетка — стандартные цвета THREE.js
+    const grid = new THREE.GridHelper(
+      Math.max(plotSize.w, plotSize.h),
+      20
+    );
+    scene.add(grid);
+
+  }, [plotSize, season]);
+
+
+
+  // useEffect(() => {
+  //   const scene = sceneRef.current; if (!scene) return;
+  //   const toRemove = []; scene.traverse(c => { if (c.name === 'ground' || c.type === 'GridHelper') toRemove.push(c) });
+  //   toRemove.forEach(c => scene.remove(c));
+  //   const groundColour = season === 'WINTER' ? 0xffffff : 0x81c784
+  //   const ground = new THREE.Mesh(new THREE.PlaneGeometry(plotSize.w, plotSize.h), new THREE.MeshStandardMaterial({ color: 0x81c784 }))
+  //   ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; ground.name = "ground"; scene.add(ground)
+  //   scene.add(new THREE.GridHelper(Math.max(plotSize.w, plotSize.h), 20))
+  // }, [plotSize, season])
 
   // --- ДЕРЕВЬЯ ---
   useEffect(() => {
@@ -155,41 +229,58 @@ export default function Scene3D({
   // --- ДОМ + CCTV ---
   useEffect(() => {
     const scene = sceneRef.current; if (!scene) return;
+    
+    // Очистка старого
     if (houseRef.current) { scene.remove(houseRef.current); houseRef.current = null; }
 
     if (house) {
       const group = new THREE.Group()
       group.position.set(house.x, 0, house.y)
-      // ГРУППУ НЕ МАСШТАБИРУЕМ! Масштабируем содержимое.
 
       const loader = new GLTFLoader()
-      // Высота дома = ширине (houseConfig.w), т.к. куб квадратный, а модель скейлится равномерно
-      const calculatedHeight = houseConfig.w 
-
+      
       loader.load('/models/house.glb', (gltf) => {
           const model = gltf.scene; 
-          // Скейлим ТОЛЬКО модель
+          
+          // 1. Масштабируем модель
           const scale = houseConfig.w / 5
           model.scale.set(scale, scale, scale) 
           model.traverse(c => { if(c.isMesh) c.castShadow = true })
+          
+          // Добавляем модель в группу, чтобы Box3 правильно посчитал границы
           group.add(model)
+
+          // 2. !!! ВЫЧИСЛЯЕМ РЕАЛЬНУЮ ВЫСОТУ !!!
+          // Создаем "коробку", которая обтягивает модель
+          const box = new THREE.Box3().setFromObject(model)
+          // box.max.y - это самая верхняя точка модели (пик крыши)
+          const realRoofHeight = box.max.y
+
+          // 3. Ставим оборудование ровно на найденную высоту
+          if (cctv) {
+              const equipment = createRoofEquipment()
+              equipment.position.y = realRoofHeight 
+              group.add(equipment)
+          }
+          
       }, undefined, () => {
-          // Фолбек: Куб
+          // --- ФОЛБЕК (Если модели нет) ---
+          // Если модели нет, высоту считаем сами, например 60% от ширины
+          const fallbackHeight = houseConfig.w * 0.6 
+          
           const cube = new THREE.Mesh(
-            new THREE.BoxGeometry(houseConfig.w, calculatedHeight, houseConfig.h), 
+            new THREE.BoxGeometry(houseConfig.w, fallbackHeight, houseConfig.h), 
             new THREE.MeshStandardMaterial({ color: 0xff5722 })
           )
-          cube.position.y = calculatedHeight / 2 // Поднимаем, чтобы стоял на земле
+          cube.position.y = fallbackHeight / 2 
           group.add(cube)
-      })
 
-      // Оборудование ставим на крышу
-      if (cctv) {
-          const equipment = createRoofEquipment()
-          // Ставим НАД высотой дома
-          equipment.position.y = calculatedHeight
-          group.add(equipment)
-      }
+          if (cctv) {
+              const equipment = createRoofEquipment()
+              equipment.position.y = fallbackHeight
+              group.add(equipment)
+          }
+      })
 
       scene.add(group)
       houseRef.current = group

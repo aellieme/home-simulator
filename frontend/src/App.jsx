@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import Scene3D from './components/Scene3D'
+import GameUI from './components/GameUI' // Импортируем новый UI
 import { checkHouse, checkTree, checkGarage, checkGardenBed } from './api'
 
 export default function App() {
@@ -24,7 +25,7 @@ export default function App() {
 
   const [isMenuCollapsed, setIsMenuCollapsed] = useState(false)
 
-  // Вспомогательная функция: проверка попадания точки в прямоугольник (для гаражей и грядок)
+  // Вспомогательные функции
   const isPointInRect = (px, py, rectX, rectY, width, height) => {
       const halfW = width / 2
       const halfH = height / 2
@@ -32,7 +33,6 @@ export default function App() {
              py >= rectY - halfH && py <= rectY + halfH
   }
 
-  // Вспомогательная функция: проверка дистанции (для деревьев)
   const isPointNear = (px, py, targetX, targetY, radius) => {
       const dx = px - targetX
       const dy = py - targetY
@@ -46,7 +46,6 @@ export default function App() {
     const apiY = coords.y + (plotSize.h / 2)
     const plotData = { width: plotSize.w, height: plotSize.h }
 
-    // --- ВЕСНА ---
     if (season === 'SPRING') {
       const houseData = { x: apiX, y: apiY, width: houseConfig.w, height: houseConfig.h }
       try {
@@ -55,27 +54,19 @@ export default function App() {
         setHouse({ x: coords.x, y: coords.y })
       } catch (e) { console.error(e) }
     } 
-    
-    // --- ЛЕТО ---
     else if (season === 'SUMMER') {
       
-      // 1. ЛОГИКА ЛАСТИКА (УДАЛЕНИЕ)
       if (activeTool === 'ERASER') {
-          // Проверяем деревья (радиус клика ~20)
           const treeToDelete = trees.find(t => isPointNear(coords.x, coords.y, t.x, t.y, 20))
           if (treeToDelete) {
               setTrees(prev => prev.filter(t => t.id !== treeToDelete.id))
-              return // Удалили и выходим
+              return 
           }
-
-          // Проверяем грядки
           const bedToDelete = gardenBeds.find(b => isPointInRect(coords.x, coords.y, b.x, b.y, b.width, b.height))
           if (bedToDelete) {
               setGardenBeds(prev => prev.filter(b => b.id !== bedToDelete.id))
               return
           }
-
-          // Проверяем гаражи
           const garageToDelete = garages.find(g => isPointInRect(coords.x, coords.y, g.x, g.y, g.width, g.height))
           if (garageToDelete) {
               setGarages(prev => prev.filter(g => g.id !== garageToDelete.id))
@@ -84,7 +75,6 @@ export default function App() {
           return
       }
 
-      // 2. ДОБАВЛЕНИЕ ОБЪЕКТОВ
       if (activeTool === 'TREE' || activeTool === 'APPLE') {
           try {
             const result = await checkTree(plotData, { x: apiX, y: apiY })
@@ -116,8 +106,6 @@ export default function App() {
           } catch(e) {}
       }
     }
-    
-    // --- ОСЕНЬ ---
     else if (season === 'AUTUMN') {
         const clickRange = 40
         let treeClicked = false
@@ -155,7 +143,7 @@ export default function App() {
   }
 
   return (
-    <div className="app-container">
+    <div className="app-container" style={{fontFamily: 'Nunito, sans-serif'}}>
       <Scene3D 
         season={season} house={house} trees={trees} garages={garages} gardenBeds={gardenBeds}
         cctv={cctv} viewMode={viewMode} plotSize={plotSize} houseConfig={houseConfig} 
@@ -164,138 +152,120 @@ export default function App() {
 
       {!showResult && (
         <>
-          <div className="ui-layer" style={{ pointerEvents: 'none', height: 'auto', paddingBottom: 0 }}>
-             <div className="top-panel" style={{ pointerEvents: 'auto', position: 'relative' }}>
-                
+          {/* НОВАЯ КРАСИВАЯ ПАНЕЛЬ UI */}
+          <div className="ui-layer" style={{ pointerEvents: 'none', zIndex: 10 }}>
+             <GameUI 
+                season={season} setSeason={setSeason}
+                plotSize={plotSize} setPlotSize={setPlotSize}
+                houseConfig={houseConfig} setHouseConfig={setHouseConfig}
+                activeTool={activeTool} setActiveTool={setActiveTool}
+                house={house}
+                cctv={cctv} setCctv={setCctv}
+                harvestStats={harvestStats}
+                isMenuCollapsed={isMenuCollapsed} setIsMenuCollapsed={setIsMenuCollapsed}
+                onFinishProject={() => { setShowResult(true); setViewMode('2D') }}
+             />
+
+             {/* Переключатель вида (Отдельный виджет справа) */}
+             <div className="view-toggle">
                 <button 
-                  onClick={() => setViewMode(viewMode === '2D' ? '3D' : '2D')}
-                  style={{ position: 'absolute', top: 5, right: 90, padding: '2px 8px', fontSize: '12px' }}
+                  className={`toggle-opt ${viewMode === '2D' ? 'active' : ''}`}
+                  onClick={() => setViewMode('2D')}
                 >
-                   {viewMode === '2D' ? 'В 3D' : 'В 2D'}
+                  2D План
                 </button>
-
                 <button 
-                  onClick={() => setIsMenuCollapsed(!isMenuCollapsed)}
-                  style={{ position: 'absolute', top: 5, right: 5, padding: '2px 8px', fontSize: '12px' }}
+                  className={`toggle-opt ${viewMode === '3D' ? 'active' : ''}`}
+                  onClick={() => setViewMode('3D')}
                 >
-                   {isMenuCollapsed ? 'Развернуть' : 'Свернуть'}
+                  3D Вид
                 </button>
-
-                {!isMenuCollapsed ? (
-                  <>
-                    <div className="season-bar">
-                      {['WINTER', 'SPRING', 'SUMMER', 'AUTUMN'].map(s => (
-                        <button key={s} className={season === s ? 'active' : ''} onClick={() => setSeason(s)}>
-                          {s === 'WINTER' ? 'Зима' : s === 'SPRING' ? 'Весна' : s === 'SUMMER' ? 'Лето' : 'Осень'}
-                        </button>
-                      ))}
-                    </div>
-
-                    {season === 'WINTER' && (
-                      <div style={{marginTop: 10}}>
-                        <label>Ширина: <input type="number" value={plotSize.w} onChange={e=>setPlotSize({...plotSize, w: +e.target.value})} style={{width:50}}/></label>
-                        <label style={{marginLeft:10}}>Длина: <input type="number" value={plotSize.h} onChange={e=>setPlotSize({...plotSize, h: +e.target.value})} style={{width:50}}/></label>
-                        <br/><label>Дом: <input type="number" value={houseConfig.w} onChange={e=>setHouseConfig({w:+e.target.value, h:+e.target.value})} style={{width:50}}/></label>
-                      </div>
-                    )}
-                    
-                    {season === 'SPRING' && <p>Разместите дом.</p>}
-                    
-                    {season === 'SUMMER' && (
-                      <div>
-                        {/* Кнопка ЛАСТИК (Выделена цветом) */}
-                        <div style={{marginBottom: 10}}>
-                            <button 
-                                onClick={()=>setActiveTool('ERASER')} 
-                                className={activeTool==='ERASER'?'active':''}
-                                style={{backgroundColor: activeTool==='ERASER'?'#ef5350':'#fff', color: activeTool==='ERASER'?'white':'red', border: '1px solid red'}}
-                            >
-                                Ластик (Удалить объект)
-                            </button>
-                        </div>
-
-                        <p style={{margin: '5px 0'}}>Деревья:</p>
-                        <button onClick={()=>setActiveTool('TREE')} className={activeTool==='TREE'?'active':''}>Дерево</button>
-                        <button onClick={()=>setActiveTool('APPLE')} className={activeTool==='APPLE'?'active':''} style={{marginLeft:5}}>Яблоня</button>
-                        
-                        <p style={{margin: '5px 0'}}>Грядки:</p>
-                        <button onClick={()=>setActiveTool('CARROT')} className={activeTool==='CARROT'?'active':''}>Морковь</button>
-                        <button onClick={()=>setActiveTool('POTATO')} className={activeTool==='POTATO'?'active':''} style={{marginLeft:5}}>Картофель</button>
-                        
-                        <p style={{margin: '5px 0'}}>Строения:</p>
-                        <button onClick={()=>setActiveTool('GARAGE')} className={activeTool==='GARAGE'?'active':''}>Гараж</button>
-                      </div>
-                    )}
-                    
-                    {season === 'AUTUMN' && (
-                      <div>
-                          <p><b>Сбор урожая:</b></p>
-                          <ul style={{paddingLeft: 20, margin: '5px 0'}}>
-                              <li>Пакетов листьев: {harvestStats.leaves}</li>
-                              <li>Яблок: {harvestStats.apples}</li>
-                              <li>Урожай моркови: {harvestStats.carrots}</li>
-                              <li>Урожай картофеля: {harvestStats.potatoes}</li>
-                          </ul>
-                          <hr/>
-                          {house && (
-                              <button onClick={() => setCctv(!cctv)} className={cctv ? 'active' : ''}>
-                                {cctv ? 'Камера и антенна установлены' : 'Установить камеру'}
-                              </button>
-                          )}
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div>
-                    <b>{season}</b>
-                  </div>
-                )}
              </div>
           </div>
 
-          <div style={{ position: 'absolute', bottom: 30, left: '50%', transform: 'translateX(-50%)', pointerEvents: 'auto' }}>
+          {/* Кнопка "Завершить" внизу */}
+          <div className="finish-btn-container">
               <button 
-                  style={{
-                    backgroundColor: '#2196F3', color: 'white', 
-                    padding: '12px 24px', fontSize: '16px', borderRadius: '8px',
-                    boxShadow: '0 4px 10px rgba(0,0,0,0.3)'
-                  }}
+                  className="finish-btn"
                   onClick={() => { setShowResult(true); setViewMode('2D'); }}
               >
-                  Завершить проект
+                  Завершить проект ➝
               </button>
           </div>
 
           {notification && (
-            <div className="notification">
-              <h3>Ошибка!</h3>
-              <p>{notification.message}</p>
-              <button onClick={() => setNotification(null)}>ОК</button>
+            <div className="notification" style={{
+              background: '#FFEBEE', color: '#D32F2F', 
+              border: '1px solid #FFCDD2', borderRadius: 12, boxShadow: '0 5px 20px rgba(0,0,0,0.1)'
+            }}>
+              <h3 style={{marginTop:0, fontSize: 16}}>Нарушение норм</h3><p style={{fontSize: 14}}>{notification.message}</p>
+              <button 
+                onClick={() => setNotification(null)}
+                style={{
+                  background: '#D32F2F', color: 'white', border:'none', 
+                  padding: '6px 12px', borderRadius: 6, cursor: 'pointer'
+                }}
+              >
+                Понятно
+              </button>
             </div>
           )}
         </>
       )}
 
+      {/* Экран результатов (Тоже стилизуем под новый дизайн) */}
       {showResult && (
         <div className="ui-layer" style={{pointerEvents: 'none'}}> 
-          <div className="side-panel" style={{pointerEvents: 'auto', position: 'absolute', right: 20, top: 20, width: 300}}>
-             <h2>Итоги проекта</h2>
-             <ul style={{listStyle: 'none', padding: 0}}>
-                 <li>Участок: {plotSize.w} x {plotSize.h}</li>
-                 <li>Дом: {houseConfig.w} x {houseConfig.h} {cctv && '+ Умный дом'}</li>
-                 <li>Всего деревьев: {trees.length}</li>
-                 <li>Всего грядок: {gardenBeds.length}</li>
-                 <hr/>
-                 <li>Листьев: {harvestStats.leaves} пак.</li>
-                 <li>Яблок: {harvestStats.apples} шт.</li>
-                 <li>Моркови: {harvestStats.carrots} урож.</li>
-                 <li>Картофеля: {harvestStats.potatoes} урож.</li>
+          <div className="game-ui-card" style={{
+             position: 'absolute', right: 20, top: 20, left: 'auto', width: 320, pointerEvents: 'auto'
+          }}>
+             <div className="ui-header">
+                <h2 className="ui-title">Итоги проекта</h2>
+             </div>
+             
+             <ul className="stats-list">
+                 <li><span> Участок</span> <span className="stat-val">{plotSize.w} x {plotSize.h}</span></li>
+                 <li><span> Дом</span> <span className="stat-val">{houseConfig.w} x {houseConfig.h} {cctv && '+CCTV'}</span></li>
+                 <li><span> Деревьев</span> <span className="stat-val">{trees.length}</span></li>
+                 <li><span> Грядок</span> <span className="stat-val">{gardenBeds.length}</span></li>
+                 <li><span> Построек</span> <span className="stat-val">{garages.length}</span></li>
              </ul>
-             <hr/>
-             <button onClick={() => setViewMode('2D')} className={viewMode==='2D'?'active':''} style={{marginRight:5}}>2D План</button>
-             <button onClick={() => setViewMode('3D')} className={viewMode==='3D'?'active':''}>3D Вид</button>
-             <br/><br/>
-             <button onClick={() => setShowResult(false)} style={{width: '100%'}}>Назад</button>
+             
+             <div className="section-label">Собранный урожай</div>
+             <ul className="stats-list">
+                 <li><span> Листья</span> <span className="stat-val">{harvestStats.leaves}</span></li>
+                 <li><span> Яблоки</span> <span className="stat-val">{harvestStats.apples}</span></li>
+                 <li><span> Морковь</span> <span className="stat-val">{harvestStats.carrots}</span></li>
+                 <li><span> Картофель</span> <span className="stat-val">{harvestStats.potatoes}</span></li>
+             </ul>
+              <div className="section-label" style={{marginTop: 15}}>Режим просмотра</div>
+             <div style={{display: 'flex', gap: 10, marginBottom: 20}}>
+                 <button 
+                   className={`secondary-btn ${viewMode === '2D' ? 'active' : ''}`}
+                   onClick={() => setViewMode('2D')}
+                 >
+                   2D 
+                 </button>
+                 <button 
+                   className={`secondary-btn ${viewMode === '3D' ? 'active' : ''}`}
+                   onClick={() => setViewMode('3D')}
+                 >
+                   3D 
+                 </button>
+             </div>
+
+             {/* <button 
+               className="primary-btn" 
+               onClick={() => setShowResult(false)}
+             >
+
+             </button> */}
+             <button 
+               className="primary-btn" 
+               onClick={() => setShowResult(false)}
+             >
+               Вернуться к редактированию
+             </button>
           </div>
         </div>
       )}
